@@ -75,15 +75,6 @@ func (f *fakeJiraClient) CloneIssue(issue *jira.Issue) (*jira.Issue, error) {
 	return clonedIssue, err
 }
 
-func (f *fakeJiraClient) GetUser(accountID string) (*jira.User, error) {
-	for _, user := range f.Users {
-		if user.AccountID == accountID {
-			return user, nil
-		}
-	}
-	return nil, jiraclient.NewNotFoundError(fmt.Errorf("no user with accountId %s found", accountID))
-}
-
 func TestHandle(t *testing.T) {
 	t.Parallel()
 	yes := true

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"net/http"
 	"net/url"
 	"regexp"
 	"slices"
@@ -82,33 +81,12 @@ type dependent struct {
 	bugState         JiraBugState
 }
 
-type jcWithGetUser interface {
-	jiraclient.Client
-	// GetUser returns a single user by their Jira account ID.
-	GetUser(accountID string) (*jira.User, error)
-}
-
-type jcWithGetUserStruct struct {
-	jiraclient.Client
-}
-
-func (jc *jcWithGetUserStruct) GetUser(accountID string) (*jira.User, error) {
-	user, response, err := jc.JiraClient().User.Get(accountID)
-	if err != nil {
-		if response != nil && response.StatusCode == http.StatusNotFound {
-			return nil, jiraclient.NewNotFoundError(err)
-		}
-		return nil, jiraclient.HandleJiraError(response, err)
-	}
-	return user, nil
-}
-
 type server struct {
 	config func() *Config
 
 	prowConfigAgent *config.Agent
 	ghc             githubClient
-	jc              jcWithGetUser
+	jc              jiraclient.Client
 
 	bigqueryInserter BigQueryInserter
 }
@@ -394,7 +372,7 @@ func (s *server) handleIssueComments(l *logrus.Entry, e github.IssueCommentEvent
 	}
 }
 
-func handle(jc jcWithGetUser, ghc githubClient, inserter BigQueryInserter, repoOptions map[string]JiraBranchOptions, branchOptions JiraBranchOptions, verificationOptions PreMergeVerificationOptions, log *logrus.Entry, e event, allRepos sets.Set[string]) error {
+func handle(jc jiraclient.Client, ghc githubClient, inserter BigQueryInserter, repoOptions map[string]JiraBranchOptions, branchOptions JiraBranchOptions, verificationOptions PreMergeVerificationOptions, log *logrus.Entry, e event, allRepos sets.Set[string]) error {
 	comment := e.comment(ghc)
 	if !e.missing {
 		for _, refIssue := range e.issues {
@@ -2049,7 +2027,7 @@ func identifyClones(issue *jira.Issue) []*jira.Issue {
 	return clones
 }
 
-func handleCherrypick(e event, gc githubClient, jc jcWithGetUser, options JiraBranchOptions, log *logrus.Entry) error {
+func handleCherrypick(e event, gc githubClient, jc jiraclient.Client, options JiraBranchOptions, log *logrus.Entry) error {
 	comment := e.comment(gc)
 	var issues []referencedIssue
 	if e.cherrypickCmd {
@@ -2146,7 +2124,7 @@ func handleCherrypick(e event, gc githubClient, jc jcWithGetUser, options JiraBr
 // 1. string: key of clone
 // 2. string: message to print after clone. The `handleBackport` function does not use this field.
 // 3. error: a message regarding what went wrong during the clone
-func createCherryPickBug(jc jcWithGetUser, bug *jira.Issue, branch string, options JiraBranchOptions, log *logrus.Entry) (string, string, error) {
+func createCherryPickBug(jc jiraclient.Client, bug *jira.Issue, branch string, options JiraBranchOptions, log *logrus.Entry) (string, string, error) {
 	allowed, err := isBugAllowed(bug, options.AllowedSecurityLevels)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to check is issue is in allowed security level: %w", err)
@@ -2318,7 +2296,7 @@ WARNING: Failed to update the target version, assignee, and sprint for the clone
 	return clone.Key, response, errMsg
 }
 
-func handleBackport(e event, gc githubClient, jc jcWithGetUser, repoOptions map[string]JiraBranchOptions, log *logrus.Entry) error {
+func handleBackport(e event, gc githubClient, jc jiraclient.Client, repoOptions map[string]JiraBranchOptions, log *logrus.Entry) error {
 	comment := e.comment(gc)
 	versionToBranch := map[string][]string{}
 	for branch, bOpts := range repoOptions {
@@ -2419,7 +2397,7 @@ func handleBackport(e event, gc githubClient, jc jcWithGetUser, repoOptions map[
 // createLinkedJiras recursively creates all descendants of the provided parent issue based on the child branches map
 // 1. map[string]string: issue key -> branch
 // 2. error
-func createLinkedJiras(jc jcWithGetUser, parentIssue *jira.Issue, parentBranch string, childBranches map[string][]string, repoOptions map[string]JiraBranchOptions, log *logrus.Entry) (map[string]string, error) {
+func createLinkedJiras(jc jiraclient.Client, parentIssue *jira.Issue, parentBranch string, childBranches map[string][]string, repoOptions map[string]JiraBranchOptions, log *logrus.Entry) (map[string]string, error) {
 	log.Infof("Starting createLinkedJiras")
 	if len(childBranches[parentBranch]) == 0 {
 		return nil, nil
