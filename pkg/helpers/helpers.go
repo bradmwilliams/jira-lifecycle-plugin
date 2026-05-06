@@ -21,6 +21,10 @@ const (
 	RankField                = "customfield_10019" // "customfield_10019": "Rank"
 	DateOfFirstResponseField = "customfield_10024" // "customfield_10024": "[CHART] Date of First Response"
 	TimeInStatusField        = "customfield_10025" // "customfield_10025": "[CHART] Time in Status"
+	MeanTimeToAcknowledge    = "customfield_10962" // "customfield_10962": "MTTA" - Mean Time to Acknowledge
+	MeanTimeToResolution     = "customfield_10963" // "customfield_10963": "MTTR" - Mean Time to Resolution
+	TimeToResolution         = "customfield_10323" // "customfield_10323": "Time to resolution"
+	TimeToFirstResponse      = "customfield_10324" // "customfield_10324": "Time to first response"
 )
 
 // GetUnknownField will attempt to get the specified field from the Unknowns struct and unmarshal
