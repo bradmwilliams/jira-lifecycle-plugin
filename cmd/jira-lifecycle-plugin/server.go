@@ -2178,6 +2178,10 @@ func createCherryPickBug(jc jiraclient.Client, bug *jira.Issue, branch string, o
 	delete(bugCopy.Fields.Unknowns, helpers.RankField)
 	delete(bugCopy.Fields.Unknowns, helpers.DateOfFirstResponseField)
 	delete(bugCopy.Fields.Unknowns, helpers.TimeInStatusField)
+	delete(bugCopy.Fields.Unknowns, helpers.MeanTimeToAcknowledge)
+	delete(bugCopy.Fields.Unknowns, helpers.MeanTimeToResolution)
+	delete(bugCopy.Fields.Unknowns, helpers.TimeToResolution)
+	delete(bugCopy.Fields.Unknowns, helpers.TimeToFirstResponse)
 	// Attachments cannot be set via the Create Issue API; they must be uploaded separately
 	bugCopy.Fields.Attachments = nil
 	// This is the sprint field; sprints are handled by a custom plugin, and the data given to us via
@@ -2612,7 +2616,7 @@ func handleVerification(e event, ghc githubClient, verificationOptions PreMergeV
 	if ok, err := ghc.IsCollaborator(e.org, e.repo, e.login); !ok {
 		return comment("Jira verification commands are restricted to collaborators for this repo.")
 	} else if err != nil {
-		return comment(fmt.Sprintf("Failed to determine wheter user %s is a collaborator for the %s/%s repo. Please try again.", e.login, e.org, e.repo))
+		return comment(fmt.Sprintf("Failed to determine whether user %s is a collaborator for the %s/%s repo. Please try again.", e.login, e.org, e.repo))
 	}
 	msg := ""
 	prLabels, err := ghc.GetIssueLabels(e.org, e.repo, e.number)
