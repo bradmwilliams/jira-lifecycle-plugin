@@ -2207,6 +2207,20 @@ func createCherryPickBug(jc jiraclient.Client, bug *jira.Issue, branch string, o
 			bugCopy.Fields.Reporter = nil
 		}
 	}
+	qaContact, err := helpers.GetIssueQaContact(&bugCopy)
+	if err != nil {
+		log.WithError(err).Debug("Failed to get QA contact field")
+		delete(bugCopy.Fields.Unknowns, helpers.QAContactField)
+	} else if qaContact != nil {
+		user, err := jc.GetUser(qaContact.AccountID)
+		if err != nil {
+			log.Debugf("QA contact %s could not be retrieved; removing field: %v", qaContact.AccountID, err)
+			delete(bugCopy.Fields.Unknowns, helpers.QAContactField)
+		} else if !user.Active {
+			log.Debugf("QA contact %s is inactive; removing field", qaContact.AccountID)
+			delete(bugCopy.Fields.Unknowns, helpers.QAContactField)
+		}
+	}
 	clone, err := jc.CloneIssue(&bugCopy)
 	if err != nil {
 		log.WithError(err).Debugf("Failed to clone bug %+v", bug)
