@@ -2270,6 +2270,8 @@ func createCherryPickBug(jc jiraclient.Client, bug *jira.Issue, branch string, o
 	switch v := sprintField.(type) {
 	case []jira.Sprint:
 		sprints = v
+	case []interface{}:
+		sprints = getSprints(sprintField.([]interface{}))
 	case nil:
 		// Nil is the expected state when not defined
 	default:
@@ -2963,4 +2965,15 @@ func searchIssuesWithPagination(jc jiraclient.Client, jql string, pageSize int) 
 
 	logrus.Debugf("Pagination complete - retrieved %d total issues across %d pages", len(allIssues), pageNum-1)
 	return allIssues, nil
+}
+
+func getSprints(raw []interface{}) []jira.Sprint {
+	sprints := make([]jira.Sprint, 0, len(raw))
+	for _, v := range raw {
+		s, ok := v.(jira.Sprint)
+		if ok {
+			sprints = append(sprints, s)
+		}
+	}
+	return sprints
 }
